@@ -4,10 +4,10 @@ import { META } from '~/lib/constants/metadata'
 import { createMetadata } from '~/lib/utils/create-metadata'
 import { formatDate } from '~/lib/utils/date'
 import { getPost, getPostSlugs } from '~/lib/utils/posts'
+import { CTA } from '~/ui/cta'
 import { CustomImage } from '~/ui/custom-image'
 import { NextPost } from '~/ui/next-post'
 import { TableOfContents } from '~/ui/table-of-contents'
-import { PostCTA } from './post-cta'
 
 export const dynamicParams = false
 
@@ -24,22 +24,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { slug } = await params
 
 	const { metadata } = await getPost(slug)
-
-	const title = `${metadata.title} | ${META.title}`
-	const description = metadata.description
-
-	return createMetadata({
-		description,
-		openGraph: {
-			description,
-			title
-		},
-		title,
-		twitter: {
-			description,
-			title
-		}
+	const socialImageAlt = metadata.title
+	const socialMetadataPath = `/blog/${slug}`
+	const baseMetadata = createMetadata({
+		description: metadata.description,
+		pathname: socialMetadataPath,
+		title: `${metadata.title} | ${META.title}`
 	})
+
+	return {
+		...baseMetadata,
+		openGraph: {
+			...(baseMetadata.openGraph ?? {}),
+			images: [{ alt: socialImageAlt, url: `${socialMetadataPath}/opengraph-image` }]
+		},
+		twitter: {
+			...(baseMetadata.twitter ?? {}),
+			images: [{ alt: socialImageAlt, url: `${socialMetadataPath}/twitter-image` }]
+		}
+	}
 }
 
 export default async function Page({ params }: Props) {
@@ -58,25 +61,29 @@ export default async function Page({ params }: Props) {
 						className="object-cover object-middle"
 					/>
 				</div>
-				<div className="flex w-full flex-col justify-between text-secondary sm:flex-row sm:items-center">
-					<p>{formatDate(metadata.date)}</p>
-					<p>
+				<div className="grid w-full grid-cols-1 gap-1 text-secondary sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+					<p className="sm:justify-self-start">{formatDate(metadata.date)}</p>
+					<p className="sm:justify-self-center">
 						by{' '}
 						<Link href={metadata.author.url} target="_blank" rel="noopener noreferrer">
 							{metadata.author.name}
 						</Link>
 					</p>
-					<p>{metadata.category}</p>
+					<p className="sm:justify-self-end">{metadata.category}</p>
 				</div>
 				<article className="mx-auto max-w-full sm:max-w-2xl">
-					<div className="flex flex-col gap-2">
-						<h1>{metadata.title}</h1>
-						{metadata.subtitle ? <h3 className="mt-0 text-secondary">{metadata.subtitle}</h3> : null}
+					<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-2">
+							<h1>{metadata.title}</h1>
+							{metadata.subtitle ? <h3 className="mt-0 text-secondary">{metadata.subtitle}</h3> : null}
+						</div>
+						<TableOfContents items={toc} />
+						<Post />
 					</div>
-					<TableOfContents items={toc} />
-					<Post />
-					<PostCTA />
-					<NextPost date={metadata.date} />
+					<div className="flex flex-col gap-4 pt-8">
+						<CTA category={metadata.category} />
+						<NextPost slug={slug} />
+					</div>
 				</article>
 			</div>
 		</div>
